@@ -428,19 +428,12 @@ function formatMinutes(minutes) {
 // ГЛАВНЫЙ ЗАГОЛОВОК
 // ======================================================
 
-function header(
-    groupName,
-    day
-) {
+function header(groupName, day) {
 
-    const time =
-        getCurrentTime();
+    const time = getCurrentTime();
 
     return (
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `        SCHEDULE\n` +
-        `          ${groupName}\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `${groupName}\n\n` +
         `${day.toUpperCase()} · ${time}\n`
     );
 }
