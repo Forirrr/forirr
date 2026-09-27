@@ -25,9 +25,7 @@ const bot = new TelegramBot(token, {
     polling: true
 });
 
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log('🚀 SCHEDULE BOT ONLINE');
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
 // ======================================================
 // ДНИ
@@ -428,9 +426,13 @@ function formatMinutes(minutes) {
 // ГЛАВНЫЙ ЗАГОЛОВОК
 // ======================================================
 
-function header(groupName, day) {
+function header(
+    groupName,
+    day
+) {
 
-    const time = getCurrentTime();
+    const time =
+        getCurrentTime();
 
     return (
         `${groupName}\n\n` +
@@ -632,9 +634,6 @@ async function showGroups(chatId) {
         await bot.sendMessage(
             chatId,
 
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `        SCHEDULE\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
             `ВЫБЕРИТЕ ГРУППУ\n\n` +
             `Доступные учебные группы:`,
 
@@ -749,10 +748,7 @@ async function showGroupMenu(
         }
 
         let message =
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `        SCHEDULE\n` +
-            `          ${group.name}\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `${group.name}\n\n` +
             `${today.toUpperCase()} · ${getCurrentTime()}\n` +
             statusText +
             `\nВыберите раздел ниже.`;
@@ -857,9 +853,6 @@ async function showToday(
         await bot.sendMessage(
             chatId,
 
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `        SCHEDULE\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
             `ВОСКРЕСЕНЬЕ\n\n` +
             `◌  Сегодня учебных пар нет.\n\n` +
             `Можно посмотреть расписание\n` +
@@ -965,10 +958,7 @@ async function showDaySchedule(
             await bot.sendMessage(
                 chatId,
 
-                `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `        SCHEDULE\n` +
-                `          ${group.name}\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `${group.name}\n\n` +
                 `${title}\n\n` +
                 `○  В этот день пар нет.`,
 
@@ -982,29 +972,21 @@ async function showDaySchedule(
         }
 
         let message =
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `        SCHEDULE\n` +
-            `          ${group.name}\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `${group.name}\n\n` +
             `${title}\n`;
 
         schedule.forEach((lesson, index) => {
 
             message +=
-                `\n${formatLessonCard(
+                `${formatLessonCard(
                     lesson,
                     selectedDay
                 )}`;
 
             if (index !== schedule.length - 1) {
-
-                message +=
-                    `\n──────────────────────\n`;
+                message += '\n';
             }
         });
-
-        message +=
-            `\n━━━━━━━━━━━━━━━━━━━━━━`;
 
         await bot.sendMessage(
             chatId,
@@ -1061,10 +1043,7 @@ async function showNow(
             await bot.sendMessage(
                 chatId,
 
-                `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `        SCHEDULE\n` +
-                `          ${group.name}\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `${group.name}\n\n` +
                 `◌  ВОСКРЕСЕНЬЕ\n\n` +
                 `Сегодня учебных пар нет.`,
 
@@ -1131,10 +1110,7 @@ async function showNow(
             } = getTimeParts(time);
 
             let message =
-                `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `        SCHEDULE\n` +
-                `          ${group.name}\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `${group.name}\n\n` +
                 `◉  СЕЙЧАС\n\n` +
                 `ПАРА №${String(number).padStart(2, '0')}\n\n`;
 
@@ -1159,10 +1135,8 @@ async function showNow(
             }
 
             message +=
-                `\n━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `ОСТАЛОСЬ · ${formatMinutes(status.remaining)}\n` +
-                `ДО ${end}\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━`;
+                `\nОСТАЛОСЬ · ${formatMinutes(status.remaining)}\n` +
+                `ДО ${end}`;
 
             await bot.sendMessage(
                 chatId,
@@ -1199,10 +1173,7 @@ async function showNow(
             } = getTimeParts(time);
 
             let message =
-                `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `        SCHEDULE\n` +
-                `          ${group.name}\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `${group.name}\n\n` +
                 `◌  ПЕРЕМЕНА\n\n` +
                 `Сейчас свободное время.\n\n` +
                 `СЛЕДУЮЩАЯ ПАРА\n\n` +
@@ -1232,9 +1203,8 @@ async function showNow(
             }
 
             message +=
-                `\n━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `СТАРТ ЧЕРЕЗ · ${formatMinutes(status.remaining)}\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━`;
+                `\nСТАРТ ЧЕРЕЗ · ${formatMinutes(status.remaining)}\n` +
+                `ДО ${start}`;
 
             await bot.sendMessage(
                 chatId,
@@ -1257,10 +1227,7 @@ async function showNow(
             await bot.sendMessage(
                 chatId,
 
-                `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `        SCHEDULE\n` +
-                `          ${group.name}\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `${group.name}\n\n` +
                 `✓  УЧЕБНЫЙ ДЕНЬ ЗАВЕРШЁН\n\n` +
                 `Сегодня пар больше нет.\n\n` +
                 `Хорошего отдыха.`,
@@ -1281,10 +1248,7 @@ async function showNow(
         await bot.sendMessage(
             chatId,
 
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `        SCHEDULE\n` +
-            `          ${group.name}\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `${group.name}\n\n` +
             `○  СЕГОДНЯ ПАР НЕТ\n\n` +
             `Для этой даты расписание отсутствует.`,
 
@@ -1336,10 +1300,7 @@ async function showWeek(
             await getSchedule(groupId);
 
         let message =
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `        SCHEDULE\n` +
-            `          ${group.name}\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `${group.name}\n\n` +
             `НЕДЕЛЯ\n`;
 
         let hasLessons = false;
@@ -1360,9 +1321,6 @@ async function showWeek(
 
             message +=
                 `\n\n◆ ${day.toUpperCase()}\n`;
-
-            message +=
-                `──────────────────────\n`;
 
             daySchedule.forEach(lesson => {
 
@@ -1409,9 +1367,6 @@ async function showWeek(
                 `\n\n○  Расписание отсутствует.`;
         }
 
-        message +=
-            `\n\n━━━━━━━━━━━━━━━━━━━━━━`;
-
         await bot.sendMessage(
             chatId,
             message,
@@ -1430,7 +1385,7 @@ async function showWeek(
 
         await bot.sendMessage(
             chatId,
-            'Ошибка при загрузке недели.'
+            'Ошибка при загрузке расписания.'
         );
     }
 }
@@ -1447,18 +1402,14 @@ async function showNotifications(
     await bot.sendMessage(
         chatId,
 
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `        NOTIFICATIONS\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `🔔  УТРЕННИЕ УВЕДОМЛЕНИЯ\n\n` +
+        `УТРЕННИЕ УВЕДОМЛЕНИЯ\n\n` +
         `Эта функция будет подключена\n` +
         `на следующем этапе.\n\n` +
         `Бот сможет каждое утро отправлять:\n\n` +
         `• первую пару\n` +
         `• кабинет\n` +
         `• преподавателя\n` +
-        `• время начала\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━`,
+        `• время начала`,
 
         {
             reply_markup: {
