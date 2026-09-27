@@ -11,13 +11,13 @@ const supabase = createClient(
 );
 
 // ==============================
-// TELEGRAM BOT
+// TELEGRAM
 // ==============================
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
 if (!token) {
-    console.error('❌ TELEGRAM_BOT_TOKEN не найден!');
+    console.error('❌ TELEGRAM_BOT_TOKEN не найден');
     process.exit(1);
 }
 
@@ -25,29 +25,45 @@ const bot = new TelegramBot(token, {
     polling: true
 });
 
-console.log('✅ Telegram-бот запущен!');
+console.log('✅ Бот запущен');
 
 // ==============================
 // ДНИ НЕДЕЛИ
 // ==============================
 
 const days = {
-    1: 'Понедельник',
-    2: 'Вторник',
-    3: 'Среда',
-    4: 'Четверг',
-    5: 'Пятница',
-    6: 'Суббота',
-    7: 'Воскресенье'
+    'Понедельник': 'Понедельник',
+    'Вторник': 'Вторник',
+    'Среда': 'Среда',
+    'Четверг': 'Четверг',
+    'Пятница': 'Пятница',
+    'Суббота': 'Суббота',
+    'Воскресенье': 'Воскресенье',
+
+    '1': 'Понедельник',
+    '2': 'Вторник',
+    '3': 'Среда',
+    '4': 'Четверг',
+    '5': 'Пятница',
+    '6': 'Суббота',
+    '7': 'Воскресенье'
+};
+
+const dayOrder = {
+    'Понедельник': 1,
+    'Вторник': 2,
+    'Среда': 3,
+    'Четверг': 4,
+    'Пятница': 5,
+    'Суббота': 6,
+    'Воскресенье': 7
 };
 
 // ==============================
-// /START И /GROUPS
+// ГЛАВНОЕ МЕНЮ
 // ==============================
 
-bot.onText(/\/(start|groups)/, async (msg) => {
-
-    const chatId = msg.chat.id;
+async function showGroups(chatId) {
 
     try {
 
@@ -57,19 +73,24 @@ bot.onText(/\/(start|groups)/, async (msg) => {
             .order('name');
 
         if (error) {
-            console.error('Ошибка groups:', error);
+            console.error('❌ Ошибка groups:', error.message);
 
-            return bot.sendMessage(
+            await bot.sendMessage(
                 chatId,
-                '❌ Не удалось загрузить список групп.'
+                '❌ Не удалось получить список групп.'
             );
+
+            return;
         }
 
         if (!groups || groups.length === 0) {
-            return bot.sendMessage(
+
+            await bot.sendMessage(
                 chatId,
                 '📚 В базе данных пока нет групп.'
             );
+
+            return;
         }
 
         const keyboard = groups.map(group => [
@@ -92,17 +113,27 @@ bot.onText(/\/(start|groups)/, async (msg) => {
 
     } catch (error) {
 
-        console.error(error);
+        console.error('❌ Ошибка showGroups:', error);
 
         await bot.sendMessage(
             chatId,
             '❌ Произошла ошибка.'
         );
     }
+}
+
+// ==============================
+// /START
+// ==============================
+
+bot.onText(/^\/(start|groups)$/, async (msg) => {
+
+    await showGroups(msg.chat.id);
+
 });
 
 // ==============================
-// CALLBACK-КНОПКИ
+// CALLBACK
 // ==============================
 
 bot.on('callback_query', async (query) => {
@@ -110,21 +141,35 @@ bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
 
-    // Убираем "часики" после нажатия кнопки
+    // Убираем индикатор загрузки Telegram
     await bot.answerCallbackQuery(query.id);
 
-    // ==========================
+    // ==========================================
+    // ГЛАВНОЕ МЕНЮ
+    // ==========================================
+
+    if (data === 'home') {
+
+        await showGroups(chatId);
+
+        return;
+    }
+
+    // ==========================================
     // ВЫБОР ГРУППЫ
-    // ==========================
+    // ==========================================
 
     if (data.startsWith('group_')) {
 
-        const groupId = data.replace('group_', '');
+        const groupId = data.substring(6);
 
         try {
 
-            // Получаем название группы
-            const { data: group, error: groupError } = await supabase
+            // Получаем группу
+            const {
+                data: group,
+                error: groupError
+            } = await supabase
                 .from('groups')
                 .select('id, name')
                 .eq('id', groupId)
@@ -132,74 +177,93 @@ bot.on('callback_query', async (query) => {
 
             if (groupError || !group) {
 
-                return bot.sendMessage(
+                console.error('❌ Ошибка группы:', groupError);
+
+                await bot.sendMessage(
                     chatId,
                     '❌ Группа не найдена.'
                 );
+
+                return;
             }
 
-            // Получаем дни, которые есть в расписании
-            const { data: schedule, error } = await supabase
+            // Получаем расписание этой группы
+            const {
+                data: schedule,
+                error: scheduleError
+            } = await supabase
                 .from('schedule')
                 .select('day_of_week')
                 .eq('group_id', groupId);
 
-            if (error) {
+            if (scheduleError) {
 
-                console.error('Ошибка schedule:', error);
+                console.error(
+                    '❌ Ошибка schedule:',
+                    scheduleError.message
+                );
 
-                return bot.sendMessage(
+                await bot.sendMessage(
                     chatId,
                     '❌ Не удалось загрузить расписание.'
                 );
+
+                return;
             }
 
+            // Если расписания действительно нет
             if (!schedule || schedule.length === 0) {
 
-                return bot.sendMessage(
+                await bot.sendMessage(
                     chatId,
-                    `📚 Группа: *${group.name}*\n\n❌ Расписание пока отсутствует.`,
+                    `📚 *${group.name}*\n\n❌ Расписание пока отсутствует.`,
                     {
-                        parse_mode: 'Markdown'
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [
+                                [
+                                    {
+                                        text: '🏠 Главное меню',
+                                        callback_data: 'home'
+                                    }
+                                ]
+                            ]
+                        }
                     }
                 );
+
+                return;
             }
 
             // Уникальные дни
             const uniqueDays = [
                 ...new Set(
-                    schedule.map(row => String(row.day_of_week))
+                    schedule.map(row => {
+                        return days[String(row.day_of_week)]
+                            || String(row.day_of_week);
+                    })
                 )
             ];
 
-            // Сортируем дни
+            // Сортировка дней
             uniqueDays.sort((a, b) => {
 
-                const numA = Number(a);
-                const numB = Number(b);
+                return (
+                    (dayOrder[a] || 99) -
+                    (dayOrder[b] || 99)
+                );
 
-                if (!isNaN(numA) && !isNaN(numB)) {
-                    return numA - numB;
+            });
+
+            // Кнопки дней
+            const keyboard = uniqueDays.map(day => [
+
+                {
+                    text: `📅 ${day}`,
+                    callback_data: `day_${groupId}_${day}`
                 }
 
-                return a.localeCompare(b);
-            });
-
-            const keyboard = [];
-
-            uniqueDays.forEach(day => {
-
-                const dayName =
-                    days[Number(day)] ||
-                    day;
-
-                keyboard.push([
-                    {
-                        text: `📅 ${dayName}`,
-                        callback_data: `day_${groupId}_${day}`
-                    }
-                ]);
-            });
+            ]);
 
             keyboard.push([
                 {
@@ -210,7 +274,7 @@ bot.on('callback_query', async (query) => {
 
             await bot.sendMessage(
                 chatId,
-                `📚 *Группа: ${group.name}*\n\n📅 Выберите день:`,
+                `📚 *Группа: ${group.name}*\n\n📅 *Выберите день:*`,
                 {
                     parse_mode: 'Markdown',
                     reply_markup: {
@@ -221,30 +285,35 @@ bot.on('callback_query', async (query) => {
 
         } catch (error) {
 
-            console.error(error);
+            console.error('❌ Ошибка выбора группы:', error);
 
             await bot.sendMessage(
                 chatId,
-                '❌ Ошибка при загрузке группы.'
+                '❌ Произошла ошибка при загрузке группы.'
             );
         }
+
+        return;
     }
 
-    // ==========================
+    // ==========================================
     // ВЫБОР ДНЯ
-    // ==========================
+    // ==========================================
 
-    else if (data.startsWith('day_')) {
+    if (data.startsWith('day_')) {
 
-        const parts = data.split('_');
+        const separator = data.indexOf('_', 4);
 
-        const groupId = parts[1];
-        const selectedDay = parts.slice(2).join('_');
+        const groupId = data.substring(4, separator);
+        const selectedDay = data.substring(separator + 1);
 
         try {
 
             // Получаем группу
-            const { data: group, error: groupError } = await supabase
+            const {
+                data: group,
+                error: groupError
+            } = await supabase
                 .from('groups')
                 .select('id, name')
                 .eq('id', groupId)
@@ -252,47 +321,72 @@ bot.on('callback_query', async (query) => {
 
             if (groupError || !group) {
 
-                return bot.sendMessage(
+                await bot.sendMessage(
                     chatId,
                     '❌ Группа не найдена.'
                 );
+
+                return;
             }
 
-            // Получаем расписание
-            const { data: schedule, error } = await supabase
+            // Получаем ВСЁ расписание группы
+            const {
+                data: allSchedule,
+                error: scheduleError
+            } = await supabase
                 .from('schedule')
                 .select('*')
-                .eq('group_id', groupId)
-                .eq('day_of_week', selectedDay)
-                .order('lesson_number', { ascending: true });
+                .eq('group_id', groupId);
 
-            if (error) {
+            if (scheduleError) {
 
-                console.error('Ошибка расписания:', error);
+                console.error(
+                    '❌ Ошибка schedule:',
+                    scheduleError.message
+                );
 
-                return bot.sendMessage(
+                await bot.sendMessage(
                     chatId,
                     '❌ Не удалось загрузить расписание.'
                 );
+
+                return;
             }
 
-            const dayName =
-                days[Number(selectedDay)] ||
-                selectedDay;
+            // Фильтруем выбранный день
+            const schedule = allSchedule.filter(row => {
 
-            // Если пар нет
-            if (!schedule || schedule.length === 0) {
+                const rowDay =
+                    days[String(row.day_of_week)]
+                    || String(row.day_of_week);
 
-                return bot.sendMessage(
+                return rowDay === selectedDay;
+            });
+
+            // Сортируем по номеру пары
+            schedule.sort((a, b) => {
+
+                return Number(a.lesson_number) -
+                       Number(b.lesson_number);
+
+            });
+
+            // ==================================
+            // НЕТ ПАР
+            // ==================================
+
+            if (schedule.length === 0) {
+
+                await bot.sendMessage(
                     chatId,
-                    `📚 *${group.name}*\n📅 *${dayName}*\n\n❌ Пар нет.`,
+                    `📚 *${group.name}*\n📅 *${selectedDay}*\n\n❌ В этот день пар нет.`,
                     {
                         parse_mode: 'Markdown',
                         reply_markup: {
                             inline_keyboard: [
                                 [
                                     {
-                                        text: '⬅️ Назад к дням',
+                                        text: '⬅️ Другой день',
                                         callback_data: `group_${groupId}`
                                     }
                                 ],
@@ -306,37 +400,49 @@ bot.on('callback_query', async (query) => {
                         }
                     }
                 );
+
+                return;
             }
 
-            // Формируем расписание
-            let message = '';
+            // ==================================
+            // ФОРМИРУЕМ РАСПИСАНИЕ
+            // ==================================
 
-            message += `📚 *${group.name}*\n`;
-            message += `📅 *${dayName}*\n\n`;
+            let message =
+                `📚 *${group.name}*\n` +
+                `📅 *${selectedDay}*\n\n`;
 
             schedule.forEach((lesson) => {
 
-                message += `━━━━━━━━━━━━━━\n`;
+                message += '━━━━━━━━━━━━━━\n';
 
-                message += `🔢 *Пара №${lesson.lesson_number}*\n`;
+                message +=
+                    `🔢 *Пара №${lesson.lesson_number}*\n`;
 
                 if (lesson.subject) {
-                    message += `📖 ${lesson.subject}\n`;
+
+                    message +=
+                        `📖 Предмет: ${lesson.subject}\n`;
                 }
 
                 if (lesson.teacher) {
-                    message += `👨‍🏫 ${lesson.teacher}\n`;
+
+                    message +=
+                        `👨‍🏫 Преподаватель: ${lesson.teacher}\n`;
                 }
 
                 if (lesson.classroom) {
-                    message += `🚪 Кабинет: ${lesson.classroom}\n`;
+
+                    message +=
+                        `🚪 Аудитория: ${lesson.classroom}\n`;
                 }
 
                 message += '\n';
             });
 
-            message += `━━━━━━━━━━━━━━`;
+            message += '━━━━━━━━━━━━━━';
 
+            // Отправляем
             await bot.sendMessage(
                 chatId,
                 message,
@@ -363,74 +469,53 @@ bot.on('callback_query', async (query) => {
 
         } catch (error) {
 
-            console.error(error);
+            console.error(
+                '❌ Ошибка выбора дня:',
+                error
+            );
 
             await bot.sendMessage(
                 chatId,
                 '❌ Ошибка при загрузке расписания.'
             );
         }
+
+        return;
     }
 
-    // ==========================
-    // ГЛАВНОЕ МЕНЮ
-    // ==========================
-
-    else if (data === 'home') {
-
-        try {
-
-            const { data: groups, error } = await supabase
-                .from('groups')
-                .select('id, name')
-                .order('name');
-
-            if (error) {
-
-                return bot.sendMessage(
-                    chatId,
-                    '❌ Не удалось загрузить группы.'
-                );
-            }
-
-            const keyboard = groups.map(group => [
-                {
-                    text: `📚 ${group.name}`,
-                    callback_data: `group_${group.id}`
-                }
-            ]);
-
-            await bot.sendMessage(
-                chatId,
-                '🏠 *Главное меню*\n\n📚 Выберите группу:',
-                {
-                    parse_mode: 'Markdown',
-                    reply_markup: {
-                        inline_keyboard: keyboard
-                    }
-                }
-            );
-
-        } catch (error) {
-
-            console.error(error);
-
-            await bot.sendMessage(
-                chatId,
-                '❌ Произошла ошибка.'
-            );
-        }
-    }
 });
 
 // ==============================
-// ОБРАБОТКА ОШИБОК
+// TELEGRAM ERRORS
 // ==============================
 
 bot.on('polling_error', (error) => {
-    console.error('Telegram polling error:', error.message);
+
+    console.error(
+        '❌ Telegram polling error:',
+        error.message
+    );
+
 });
 
+// ==============================
+// GLOBAL ERRORS
+// ==============================
+
 process.on('unhandledRejection', (error) => {
-    console.error('Unhandled rejection:', error);
+
+    console.error(
+        '❌ Unhandled rejection:',
+        error
+    );
+
+});
+
+process.on('uncaughtException', (error) => {
+
+    console.error(
+        '❌ Uncaught exception:',
+        error
+    );
+
 });
